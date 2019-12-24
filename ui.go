@@ -146,17 +146,24 @@ func (win *win) print(x, y int, fg, bg termbox.Attribute, s string) (termbox.Att
 			continue
 		}
 
-		if x < win.w {
-			termbox.SetCell(win.x+x, win.y+y, r, fg, bg)
+		offset := 0
+		if r == '\t' {
+			offset = gOpts.tabstop - (x-off)%gOpts.tabstop
+		} else {
+			offset = runewidth.RuneWidth(r)
+		}
+
+		for _i := 0; _i < offset && x+_i < win.w; _i++ {
+			_r := ' '
+			if _i == 0 {
+				_r = r
+			}
+			termbox.SetCell(win.x+x+_i, win.y+y, _r, fg, bg)
 		}
 
 		i += w - 1
 
-		if r == '\t' {
-			x += gOpts.tabstop - (x-off)%gOpts.tabstop
-		} else {
-			x += runewidth.RuneWidth(r)
-		}
+		x += offset
 	}
 
 	return fg, bg
@@ -183,7 +190,7 @@ func (win *win) printReg(reg *reg) {
 
 	if reg.loading {
 		fg = termbox.AttrReverse
-		win.print(2, 0, fg, bg, "loading...")
+		win.print(0, 0, fg, bg, "loading...")
 		return
 	}
 
@@ -249,17 +256,17 @@ func (win *win) printDir(dir *dir, selections map[string]int, saves map[string]b
 	}
 
 	if dir.loading {
-		win.print(2, 0, termbox.AttrReverse, termbox.ColorDefault, "loading...")
+		win.print(0, 0, termbox.AttrReverse, termbox.ColorDefault, "loading...")
 		return
 	}
 
 	if dir.noPerm {
-		win.print(2, 0, termbox.AttrReverse, termbox.ColorDefault, "permission denied")
+		win.print(0, 0, termbox.AttrReverse, termbox.ColorDefault, "permission denied")
 		return
 	}
 
 	if len(dir.files) == 0 {
-		win.print(2, 0, termbox.AttrReverse, termbox.ColorDefault, "empty")
+		win.print(0, 0, termbox.AttrReverse, termbox.ColorDefault, "empty")
 		return
 	}
 
@@ -356,7 +363,13 @@ func (win *win) printDir(dir *dir, selections map[string]int, saves map[string]b
 
 		s = append(s, ' ')
 
-		win.print(lnwidth+1, i, fg, bg, string(s))
+		offset := 0
+		if lnwidth > 0 {
+			offset = 1
+		} else {
+			s = append(s, ' ')
+		}
+		win.print(lnwidth+offset, i, fg, bg, string(s))
 	}
 }
 
